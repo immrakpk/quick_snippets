@@ -1,15 +1,19 @@
-This method works on the Ubuntu releases 17.04 (Zesty), 17.10 (Artful), 18.04 (Bionic), 18.10 (Cosmic), 19.04 (Disco) and 20.04 (Focal):
+If you look at ls -al /etc/resolv.conf it should resolve as a link to ../run/systemd/resolve/stub-resolv.conf
 
-# Disable and stop the systemd-resolved service:
-sudo systemctl disable systemd-resolved
-sudo systemctl stop systemd-resolved
+The real resolv.conf should be in that directory, as well.
 
-# Then put the following line in the [main] section of your /etc/NetworkManager/NetworkManager.conf:
-dns=default
-Delete the symlink /etc/resolv.conf
+You can redirect the symbolic link:
 
-rm /etc/resolv.conf
-Restart NetworkManager
+sudo rm -f /etc/resolv.conf
+sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-# sudo systemctl restart NetworkManager
-// Also be aware that disabling systemd-resolvd might break name resolution in VPN for some users. See this bug on launchpad (Thanks, Vincent).
+------------------------- FINAL
+
+Step 1: Add Nameserver in /run/systemd/resolve/stub-resolv.conf
+
+nameserver 172.19.1.1
+
+Step 2: Remove existing resolve.conf and create a new sym-link
+
+sudo rm -f /etc/resolv.conf
+sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
