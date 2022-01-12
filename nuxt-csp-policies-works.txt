@@ -1,0 +1,18 @@
+render: {
+        csp: {
+                hashAlgorithm: 'sha256',
+                policies: {
+                        'default-src': ["'self'",'*.google.com'],
+                        'img-src': ["'self'",'https:', '*.dummyDomain.com'],
+                        'media-src': ["'self'",'https:', '*.dummyDomain.com'],
+                        'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com','*.fontawesome.com'],
+                        'font-src': ["'self'","'unsafe-inline'",'fonts.gstatic.com'],
+                        'script-src': [
+                        "'self'","'unsafe-inline'",'*.dummyDomain.com','*.gstatic.com'
+                        ],
+						'worker-src': ["'self'", `blob:`, '*.dummyDomain.com'],
+                        'connect-src': ["'self'",'*.dummyDomain.com'],
+                        'frame-ancestors': ["'none'"]
+                }
+        }
+},

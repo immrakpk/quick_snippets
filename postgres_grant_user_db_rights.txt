@@ -1,0 +1,6 @@
+create user myuser with encrypted password 'mypass';
+
+GRANT ALL PRIVILEGES ON DATABASE "exalted" to exalted;
+GRANT ALL PRIVILEGES ON DATABASE "newdb" to user1;
+
+

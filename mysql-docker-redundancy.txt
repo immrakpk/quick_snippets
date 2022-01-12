@@ -1,0 +1,182 @@
+docker network create innodbnet
+# Create Instances
+for N in 1 2 3
+do docker run -d --name=mysql$N --hostname=mysql$N --net=innodbnet \
+		-e MYSQL_ROOT_PASSWORD=root mysql/mysql-server:8.0
+done
+# Create Users
+for N in 1 2 3
+do docker exec -it mysql$N mysql -uroot -proot \
+		-e "CREATE USER 'clusteradmin'@'%' IDENTIFIED BY 'admin';" \
+		-e "GRANT ALL privileges ON *.* TO 'clusteradmin'@'%' with grant option;" \
+		-e "reset master;"
+done
+# Check if users are created
+for N in 1 2 3
+do docker exec -it mysql$N mysql -uclusteradmin -padmin \
+		-e "select @@hostname;"  \
+		-e "SELECT user FROM mysql.user where user = 'clusteradmin';"
+done
+
+# Go inside on of the instance for further configuration of cluster
+docker exec -it mysql1 mysqlsh -uroot -proot -S/var/run/mysqld/mysqlx.sock
+# optional '\sql' followed by 'SELECT @@hostname ;'
+# shift back to js console '\js'
+
+# Check if instances are configured or not (inside js console)
+dba.checkInstanceConfiguration("clusteradmin@mysql1:3306")
+dba.checkInstanceConfiguration("clusteradmin@mysql2:3306")
+dba.checkInstanceConfiguration("clusteradmin@mysql3:3306")
+
+# Initial Configuration
+# Since instances are not configured let's configure them
+# when configured it will restart so start the respective docker again
+# login back by using "docker exec -it mysql1 mysqlsh -uroot -proot -S/var/run/mysqld/mysqlx.sock"
+# checkInstanceConfiguration again
+dba.configureInstance("clusteradmin@mysql1:3306")
+dba.configureInstance("clusteradmin@mysql2:3306")
+dba.configureInstance("clusteradmin@mysql3:3306")
+
+# Create Cluster
+\c clusteradmin@mysql1:3306
+
+var cls = dba.createCluster("mycluster")
+
+cls.status()
+cls.describe()
+
+cls.addInstance("clusteradmin@mysql2:3306")
+cls.addInstance("clusteradmin@mysql3:3306")
+
+cls.status()
+cls.describe()
+
+# For load balancing let's create MYSQL Router
+
+docker run -d --name mysql-router --net=innodbnet \
+	-e MYSQL_HOST=mysql1 \
+	-e MYSQL_PORT=3306 \
+	-e MYSQL_USER=clusteradmin \
+	-e MYSQL_PASSWORD=admin \
+	-e MYSQL_INNODB_CLUSTER_MEMBERS=3 \
+	mysql/mysql-router
+# log regarding the router / usefull info	
+docker logs mysql-router
+
+# Lets create sql client server now
+docker run -d --name=mysql-client --hostname=mysql-client --net=innodbnet \
+	-e MYSQL_ROOT_PASSWORD=root mysql/mysql-server:8.0
+	
+docker exec -it mysql-client mysql -h mysql-router -P 6446 -uclusteradmin -padmin \
+	-e "select @@hostname; CREATE DATABASE schoool; use schoool;
+	CREATE TABLE if not exists schoool.students(stndid int primary key auto_increment,stdname
+	 varchar(100),phone int,classid int);"\
+	 -e "INSERT schoool.students(stdname,phone,classid) values('Test',12423423,7);" \
+	 -e "select * from schoool.students"
+
+
+docker exec -it mysql-client mysql -h mysql-router -P 6447 -uclusteradmin -padmin \
+	-e "select * from schoool.students"
+
+
+for N in 1 2 3
+do docker exec -it mysql$N mysql -uclusteradmin -padmin \
+	-e "select @@hostname;" \
+	-e "select * from schoool.students;"
+done
+
+
+# stop mysql1 and then
+docker exec -it mysql-client mysqlsh -h mysql-router -P 6447 -uclusteradmin -padmin
+# next check cluster info by 
+var cls = dba.getCluster("mycluster")
+
+cls.status()
+cls.describe()
+
+
+
+======================================================================
+Some useful mysql administration commands
+======================================================================
+# How to set MySQL Root password?
+mysqladmin -u root password YOURNEWPASSWORD
+
+# How to Change MySQL Root password?
+mysqladmin -u root -p123456 password 'xyz123'
+
+# check MySQL Server is running?
+mysqladmin -u root -p ping
+
+# Check which MySQL version
+mysqladmin -u root -p version
+
+# Find out current Status of MySQL server
+mysqladmin -u root -ptmppassword status
+
+# check status of all MySQL Server Variable’s and value’s
+mysqladmin -u root -p extended-status
+
+# How to see all MySQL server Variables and Values?
+mysqladmin  -u root -p variables
+
+# How to check all the running Process of MySQL server?
+mysqladmin -u root -p processlist
+
+# create/drop a Database in MySQL
+mysqladmin -u root -p create databasename
+mysqladmin -u root -p drop databasename
+
+# reload/refresh MySQL Privileges?
+mysqladmin -u root -p reload;
+mysqladmin -u root -p refresh
+
+## How to shutdown MySQL server Safely?
+	# mysqladmin -u root -p shutdown
+	# You can also use the following commands to start/stop MySQL server.
+		 /etc/init.d/mysqld stop
+		 /etc/init.d/mysqld start
+
+## Some useful MySQL Flush commands
+	# mysqladmin -u root -p flush-hosts
+	# mysqladmin -u root -p flush-tables
+	# mysqladmin -u root -p flush-threads
+	# mysqladmin -u root -p flush-logs
+	# mysqladmin -u root -p flush-privileges
+	# mysqladmin -u root -p flush-status
+
+## How to kill Sleeping MySQL Client Process?
+	# Use the following command to identify sleeping MySQL client process.
+	mysqladmin -u root -p processlist
+		# Now, run the following command with kill and process ID as shown below.
+		mysqladmin -u root -p kill 5
+		## If you like to kill multiple process, then pass the process ID‘s with comma separated as shown below.
+		mysqladmin -u root -p kill 5,10
+
+# How to run multiple mysqladmin commands together?
+!If you would like to execute multiple ‘mysqladmin‘ commands together, then the command would be like this.
+mysqladmin  -u root -p processlist status version
+
+# How to Connect remote mysql server
+mysqladmin  -h 172.16.25.126 -u root -p
+
+# How to execute command on remote MySQL server
+!Let’s say you would like to see the status of remote MySQL server, then the command would be.
+mysqladmin  -h 172.16.25.126 -u root -p status
+
+# How to store MySQL server Debug Information to logs?
+! It tells the server to write debug information about locks in use, used memory and query usage to the MySQL log file including information about event scheduler.
+mysqladmin  -u root -p debug
+
+# How to view mysqladmin options and usage
+mysqladmin --help
+
+
+
+
+
+
+
+
+
+

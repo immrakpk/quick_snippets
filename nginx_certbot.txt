@@ -1,0 +1,29 @@
+sudo apt-get update -y
+sudo apt-get install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d example.com -d www.example.com
+sudo certbot --nginx -d exaltedcollection.com -d www.exaltedcollection.com
+
+-------------------------------------------------------------------------------
+Choose how you'd like to run Certbot
+Either get and install your certificates...
+Run this command to get a certificate and have Certbot edit your Nginx configuration automatically to serve it,
+turning on HTTPS access in a single step.
+
+sudo certbot --nginx
+-------------------------------------------------------------------------------
+
+Or, just get a certificate
+If you're feeling more conservative and would like to make the changes to your Nginx configuration by hand, run this command.
+
+sudo certbot certonly --nginx
+-------------------------------------------------------------------------------
+
+Test automatic renewal
+The Certbot packages on your system come with a cron job or systemd timer that will renew your certificates automatically before they expire.
+You will not need to run Certbot again, unless you change your configuration.
+
+You can test automatic renewal for your certificates by running this command:
+
+sudo certbot renew --dry-run
+If that command completes without errors, your certificates will renew automatically in the background.
+-------------------------------------------------------------------------------

@@ -1,0 +1,80 @@
+
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+
+
+
+sudo -i -u postgres
+psql
+createuser --interactive
+sudo -u postgres createuser --interactive
+
+sudo -i -u postgres
+psql
+alter user sam password ‘123456’;
+alter user sam with  password 'sam123';
+
+#How to Delete a Password for the User in PostgreSQL?
+alter user  sam  with  password  null;
+
+
+******************************************************************
+PGMaster and 192.168.152.142 |172.19.0.128
+******************************************************************
+---------------------------------
+postgresql.conf file
+/etc/postgresql/12/main/
+---------------------------------
+listen_addresses = '*'
+
+# Creating user User
+su - postgres # switch user
+psql # enter in postgres shell
+create user replicator WITH REPLICATION ENCRYPTED PASSWORD 'SomePassword' # create user name replicator
+create user replicator WITH REPLICATION ENCRYPTED PASSWORD 'admin'; # create user name replicator
+\du # verify if user is created
+exit
+exit
+---------------------------------
+pg_hba.conf file
+/etc/postgresql/12/main/
+---------------------------------
+host    replication     replicator      192.168.152.143/24      md5
+
+sudo systemctl restart postgresql # restart postgresql service
+sudo systemctl status postgresql # check status
+
+******************************************************************
+PSlave and 192.168.152.143 | 172.19.0.122
+******************************************************************
+sudo systemctl stop postgresql
+
+sudo su - postgres # switch user
+
+cp -R /var/lib/postgresql/12/main/ /var/lib/postgresql/12/main_old/ # backup data folder
+rm -rf /var/lib/postgresql/12/main/
+
+pg_basebackup -h 172.19.0.128 -D /var/lib/postgresql/12/main/ -U replicator -P -v -R -X stream -C -S slaveslot1
+
+ls -ltrh /var/lib/postgresql/12/main/
+# Notice that standby.signal is created and the connection settings are appended to postgresql.auto.conf.
+
+sudo systemctl start postgresql # restart postgresql service
+
+psql # enter in postgres shell
+
+select datname from pg_database;
+SELECT * FROM pg_stat_wal_receiver;
+\x # for expand mode
+SELECT * FROM pg_stat_wal_receiver;
+\x
+SELECT * FROM pg_stat_replication;
+
+******************************************************************
+PGMaster and 192.168.152.142 | 172.19.0.122
+******************************************************************
+sudo su postgres
+SELECT * FROM pg_replication_slots;
+SELECT client_addr, state FROM pg_stat_replication;
+
+### https://www.postgresql.r2schools.com/how-to-setup-streaming-replication-in-postgresql-step-by-step-on-ubuntu/

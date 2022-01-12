@@ -1,0 +1,67 @@
+# NFS Server Install
+sudo apt-get update
+sudo apt install nfs-kernel-server
+sudo mkdir -p /mnt/sharedfolder
+sudo chown nobody:nogroup /mnt/sharedfolder
+sudo chmod 777 /mnt/sharedfolder
+sudo nano /etc/exports
+
+Editing this file needs root access; therefore you will need to use sudo with your command. You can also open the file in any of your personal favorite text editors.
+
+Once you have opened the file, you can allow access to:
+
+A single client by adding the following line in the file:
+/mnt/sharedfolder clientIP(rw,sync,no_subtree_check)
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+Multiple clients by adding the following lines in the file:
+/mnt/sharedfolder client1IP(rw,sync,no_subtree_check)
+/mnt/sharedfolder client2IP(rw,sync,no_subtree_check)
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+Multiple clients, by specifying an entire subnet that the clients belong to:
+/mnt/sharedfolder subnetIP/24(rw,sync,no_subtree_check)
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+
+The permissions “rw,sync,no_subtree_check” permissions defined in this file mean that the client(s) can perform:
+
+rw: read and write operations
+sync: write any change to the disc before applying it
+no_subtree_check: prevent subtree checking
+
+After making all the above configurations in the host system, now is the time to export the shared directory through the following command as sudo:
+
+sudo exportfs -a
+
+----------------------------------------------------------
+Open firewall for the client (s)
+----------------------------------------------------------
+sudo apt-get update
+sudo apt-get install nfs-common
+sudo mkdir -p /mnt/sharedfolder_client
+sudo mount serverIP:/exportFolder_server /mnt/mountfolder_client
+sudo mount 192.168.100.5:/mnt/sharedfolder /mnt/sharedfolder_client
+or
+sudo mount -t nfs 192.168.100.5:/mnt/sharedfolder /mnt/sharedfolder_client
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+Automatically Mounting NFS File Systems with /etc/fstab #
+sudo nano /etc/fstab
+192.168.100.5:/mnt/sharedfolder  /var/local_mounting_point_dir nfs      defaults    0       0
+. . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 
+Unmounting NFS File Systems
+sudo umount 192.168.100.5:/mnt/sharedfolder 
+sudo umount /var/local_mounting_point_dir
+
+The umount command will fail to detach the share when the mounted volume is in use. To find out which processes are accessing the NFS share, use the fuser command:
+
+fuser -m MOUNT_POINT
+fuser -m /var/local_mounting_point_dir
+
+Once you find the processes you can stop them with the kill command and unmount the NFS share.
+
+If you still have problems unmounting the share use the -l (--lazy) option which allows you to unmount a busy file system as soon as it is not busy anymore.
+
+umount -l MOUNT_POINT
+
+If the remote NFS system is unreachable, use the -f (--force) option to force an unmount.
+
+umount -f MOUNT_POINT

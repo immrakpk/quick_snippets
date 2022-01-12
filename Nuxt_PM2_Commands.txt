@@ -1,0 +1,5 @@
+
+npm install pm2 -g
+pm2 start npm --name "your-app-alias" -- start
+pm2 start npm -- start
+pm2 restart your-app-alias

@@ -1,0 +1,41 @@
+
+map $sent_http_content_type $expires {
+    "text/html" epoch;
+    "text/html; charset=utf-8" epoch;
+    default off;
+}
+
+server {
+    #listen 80;
+    #listen [::]:80 ipv6only=on;
+    listen 443 default_server ssl;
+
+    server_name dummyDomain.com www.dummyDomain.com;
+
+
+    #listen [::]:443 ssl ipv6only=on; # managed by Certbot
+    #listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/dummyDomain.com/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/dummyDomain.com/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+    location / {
+        expires $expires;
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 1m;
+        proxy_connect_timeout 1m;
+        proxy_pass http://127.0.0.1:3000;
+    }
+
+    # Redirect non-https traffic to https
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    }
+
+}

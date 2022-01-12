@@ -1,0 +1,18 @@
+# /etc/netplan/01-netcfg.yaml
+network:
+  version: 2
+  #renderer: networkd
+  ethernets:
+    ens3:
+      dhcp4: no
+      addresses:
+        - 172.19.2.10/24
+      gateway4: 172.19.2.254
+      nameservers:
+          addresses: [172.19.1.1,8.8.8.8, 1.1.1.1]
+
+#Apply the setting
+# --> sudo netplan apply
+
+# Validate by
+# --> ip addr show dev ens3
